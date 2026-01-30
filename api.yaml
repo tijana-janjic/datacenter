@@ -1,0 +1,450 @@
+swagger: "2.0"
+info:
+  title: Datacenter API
+  description: Endpoints for racks, devices and distribution planning/rebalancing.
+  version: 1.0.0
+host: localhost:8080
+basePath: /
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+
+paths:
+  /datacenter/distribute:
+    post:
+      summary: Generate a balanced device placement across racks.
+      tags: [datacenter]
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/DistributionRequest'
+      responses:
+        200:
+          description: Balanced placement created.
+          schema:
+            $ref: '#/definitions/DistributionResponse'
+        400:
+          description: Validation failed.
+          schema:
+            $ref: '#/definitions/ApiError'
+        422:
+          description: No feasible placement found.
+          schema:
+            $ref: '#/definitions/ApiError'
+
+  /datacenter/rebalance:
+    post:
+      summary: Rebalance an existing placement to restore feasibility.
+      tags: [datacenter]
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/DistributionRequest'
+      responses:
+        200:
+          description: Feasible placement returned.
+          schema:
+            $ref: '#/definitions/DistributionResponse'
+        400:
+          description: Validation failed.
+          schema:
+            $ref: '#/definitions/ApiError'
+        422:
+          description: No feasible placement found.
+          schema:
+            $ref: '#/definitions/ApiError'
+
+  /devices:
+    get:
+      summary: List devices.
+      tags: [devices]
+      responses:
+        200:
+          description: Array of devices.
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/DeviceResponse'
+    post:
+      summary: Create a device (auto-placed if rackSerialNumber is null/blank).
+      tags: [devices]
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/DeviceCreateRequest'
+      responses:
+        200:
+          description: Device created.
+          schema:
+            $ref: '#/definitions/DeviceResponse'
+        400:
+          description: Validation error or device cannot be placed.
+          schema:
+            $ref: '#/definitions/ApiError'
+
+  /devices/rack/{rackSerial}:
+    post:
+      summary: Create a device explicitly in a rack.
+      tags: [devices]
+      parameters:
+        - name: rackSerial
+          in: path
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/DeviceCreateRequest'
+      responses:
+        200:
+          description: Device created.
+          schema:
+            $ref: '#/definitions/DeviceResponse'
+        404:
+          description: Rack not found.
+          schema:
+            $ref: '#/definitions/ApiError'
+        400:
+          description: Validation error or device cannot be placed.
+          schema:
+            $ref: '#/definitions/ApiError'
+
+  /devices/{serialNumber}:
+    get:
+      summary: Get a device by serial number.
+      tags: [devices]
+      parameters:
+        - name: serialNumber
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Device found.
+          schema:
+            $ref: '#/definitions/DeviceResponse'
+        404:
+          description: Device not found.
+          schema:
+            $ref: '#/definitions/ApiError'
+    put:
+      summary: Update a device.
+      tags: [devices]
+      parameters:
+        - name: serialNumber
+          in: path
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/DeviceUpdateRequest'
+      responses:
+        200:
+          description: Device updated.
+          schema:
+            $ref: '#/definitions/DeviceResponse'
+        404:
+          description: Device not found.
+          schema:
+            $ref: '#/definitions/ApiError'
+    delete:
+      summary: Delete a device.
+      tags: [devices]
+      parameters:
+        - name: serialNumber
+          in: path
+          required: true
+          type: string
+      responses:
+        204:
+          description: Deleted.
+        404:
+          description: Device not found.
+          schema:
+            $ref: '#/definitions/ApiError'
+
+  /racks:
+    get:
+      summary: List racks.
+      tags: [racks]
+      responses:
+        200:
+          description: Array of racks.
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/RackResponse'
+    post:
+      summary: Create a rack.
+      tags: [racks]
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/RackCreateRequest'
+      responses:
+        200:
+          description: Rack created.
+          schema:
+            $ref: '#/definitions/RackResponse'
+        400:
+          description: Validation error.
+          schema:
+            $ref: '#/definitions/ApiError'
+
+  /racks/{serialNumber}:
+    get:
+      summary: Get a rack by serial number.
+      tags: [racks]
+      parameters:
+        - name: serialNumber
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Rack found.
+          schema:
+            $ref: '#/definitions/RackResponse'
+        404:
+          description: Rack not found.
+          schema:
+            $ref: '#/definitions/ApiError'
+    put:
+      summary: Update a rack.
+      tags: [racks]
+      parameters:
+        - name: serialNumber
+          in: path
+          required: true
+          type: string
+        - in: body
+          name: body
+          required: true
+          schema:
+            $ref: '#/definitions/RackUpdateRequest'
+      responses:
+        200:
+          description: Rack updated.
+          schema:
+            $ref: '#/definitions/RackResponse'
+        404:
+          description: Rack not found.
+          schema:
+            $ref: '#/definitions/ApiError'
+    delete:
+      summary: Delete a rack.
+      tags: [racks]
+      parameters:
+        - name: serialNumber
+          in: path
+          required: true
+          type: string
+      responses:
+        204:
+          description: Deleted.
+        404:
+          description: Rack not found.
+          schema:
+            $ref: '#/definitions/ApiError'
+
+definitions:
+  ApiError:
+    type: object
+    properties:
+      message:
+        type: string
+      timestamp:
+        type: string
+        format: date-time
+
+  RackCreateRequest:
+    type: object
+    required: [serialNumber, name, spaceSize, maxPowerUsage]
+    properties:
+      serialNumber:
+        type: string
+      name:
+        type: string
+      description:
+        type: string
+      spaceSize:
+        type: integer
+        format: int32
+        minimum: 1
+      maxPowerUsage:
+        type: integer
+        format: int32
+        minimum: 1
+
+  RackUpdateRequest:
+    type: object
+    required: [name, spaceSize, maxPowerUsage]
+    properties:
+      name:
+        type: string
+      description:
+        type: string
+      spaceSize:
+        type: integer
+        format: int32
+        minimum: 1
+      maxPowerUsage:
+        type: integer
+        format: int32
+        minimum: 1
+
+  RackResponse:
+    type: object
+    properties:
+      serialNumber:
+        type: string
+      name:
+        type: string
+      description:
+        type: string
+      spaceSize:
+        type: integer
+      usedSpaceSize:
+        type: integer
+      maxPowerUsage:
+        type: integer
+      currentPowerUsage:
+        type: integer
+      devices:
+        type: array
+        items:
+          $ref: '#/definitions/DeviceResponse'
+
+  DeviceCreateRequest:
+    type: object
+    required: [serialNumber, name, size, powerUsage]
+    properties:
+      serialNumber:
+        type: string
+      name:
+        type: string
+      description:
+        type: string
+      size:
+        type: integer
+        format: int32
+        minimum: 1
+      powerUsage:
+        type: integer
+        format: int32
+        minimum: 1
+      rackSerialNumber:
+        type: string
+        description: Optional target rack; if null/blank device will be auto-placed.
+
+  DeviceUpdateRequest:
+    type: object
+    required: [name, size, powerUsage]
+    properties:
+      name:
+        type: string
+      description:
+        type: string
+      size:
+        type: integer
+        minimum: 1
+      powerUsage:
+        type: integer
+        minimum: 1
+
+  DeviceResponse:
+    type: object
+    properties:
+      serialNumber:
+        type: string
+      name:
+        type: string
+      description:
+        type: string
+      size:
+        type: integer
+      powerUsage:
+        type: integer
+      rackSerial:
+        type: string
+        description: Null if not placed.
+
+  DistributionRequest:
+    type: object
+    required: [racks, devices]
+    properties:
+      racks:
+        type: array
+        items:
+          $ref: '#/definitions/RackCreateRequest'
+      devices:
+        type: array
+        items:
+          $ref: '#/definitions/DeviceCreateRequest'
+
+  DevicePlacement:
+    type: object
+    properties:
+      deviceSerialNumber:
+        type: string
+      rackSerialNumber:
+        type: string
+
+  RackDistribution:
+    type: object
+    properties:
+      rackSerialNumber:
+        type: string
+      usedSpace:
+        type: integer
+      spaceSize:
+        type: integer
+      usedPower:
+        type: integer
+      maxPowerUsage:
+        type: integer
+      powerUtilization:
+        type: number
+        format: double
+        description: Percent of maxPowerUsage (0-100).
+      deviceSerialNumbers:
+        type: array
+        items:
+          type: string
+
+  DistributionResponse:
+    type: object
+    properties:
+      utilRange:
+        type: number
+        format: double
+      placements:
+        type: array
+        items:
+          $ref: '#/definitions/DevicePlacement'
+      racks:
+        type: array
+        items:
+          $ref: '#/definitions/RackDistribution'
+
+tags:
+  - name: datacenter
+    description: Placement and rebalancing operations.
+  - name: devices
+    description: CRUD for devices.
+  - name: racks
+    description: CRUD for racks.
